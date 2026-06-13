@@ -2,6 +2,7 @@ import path from 'path'
 import { extractProfilesFromHar, readHar } from '../lib/har-parser.js'
 import { listProfiles, mergeProfiles, DEFAULT_STORE } from '../lib/device-store.js'
 import { collectHarFiles } from '../lib/import-source.js'
+import { hasRecentVerificationLog, verificationHelpText } from '../lib/verification-watch.js'
 
 const PluginBase = globalThis.plugin || class {
   constructor (options = {}) {
@@ -17,7 +18,9 @@ export class MysDeviceApp extends PluginBase {
       event: 'message',
       priority: 5000,
       rule: [
+        { reg: '^#?.*(米游社|mys).*(更新|刷新).*面板.*$', fnc: 'watchVerification' },
         { reg: '^#?(米游社|mys)(设备|模型)(帮助)?$', fnc: 'help' },
+        { reg: '^#?(米游社|mys)(验证码|验证)帮助$', fnc: 'verificationHelp' },
         { reg: '^#?(米游社|mys)(设备|模型)列表$', fnc: 'list' },
         { reg: '^#?(米游社|mys)(设备|模型)检查$', fnc: 'list' },
         { reg: '^#?(米游社|mys)(设备|模型)导入(?:\\s+(.+))?$', fnc: 'importHar' }
@@ -32,9 +35,38 @@ export class MysDeviceApp extends PluginBase {
       '#米游社设备导入 /root/Yunzai/temp/xxx.har',
       '#米游社设备导入 /root/Yunzai/temp/xxx.zip',
       '#米游社设备导入 <同消息或引用消息中的 har/zip/rar 文件>',
+      '#米游社验证帮助',
       '',
       '说明：只导入你自己抓包得到的成功 character/detail 请求模型。zip/rar 内可以包含一个或多个 HAR。'
     ].join('\n'))
+  }
+
+  async verificationHelp (e) {
+    await e.reply(verificationHelpText())
+  }
+
+  async watchVerification (e) {
+    const startedAt = Date.now()
+    const userId = e.user_id || e.userId || e.sender?.user_id || ''
+    const key = `${userId}:${Math.floor(startedAt / 120000)}`
+
+    MysDeviceApp.recentWatchKeys ||= new Set()
+    if (!MysDeviceApp.recentWatchKeys.has(key)) {
+      MysDeviceApp.recentWatchKeys.add(key)
+      setTimeout(async () => {
+        try {
+          if (hasRecentVerificationLog({ userId, since: startedAt })) {
+            await e.reply(verificationHelpText())
+          }
+        } catch {
+          // Do not disturb the original genshin or GT-Manual command flow.
+        } finally {
+          setTimeout(() => MysDeviceApp.recentWatchKeys.delete(key), 120000)
+        }
+      }, 8000)
+    }
+
+    return false
   }
 
   async list (e) {

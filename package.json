@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "extract": "node scripts/extract-mys-device-from-har.mjs",
-    "check": "node --check index.js && node --check apps/mys-device.js && node --check lib/device-store.js && node --check lib/har-parser.js && node --check lib/import-source.js && node --check lib/request-model.js && node --check scripts/extract-mys-device-from-har.mjs"
+    "check": "node --check index.js && node --check apps/mys-device.js && node --check lib/device-store.js && node --check lib/har-parser.js && node --check lib/import-source.js && node --check lib/request-model.js && node --check lib/verification-watch.js && node --check scripts/extract-mys-device-from-har.mjs"
   },
   "license": "UNLICENSED",
   "dependencies": {

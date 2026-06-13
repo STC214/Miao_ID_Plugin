@@ -1,5 +1,7 @@
 # Miao ID Plugin
 
+Repository: <https://github.com/STC214/Miao_ID_Plugin.git>
+
 ## 1. 功能简述
 
 这个插件用于给 TRSS-Yunzai / Yunzai 管理米游社 App H5 请求所需的本地设备模型。
@@ -15,7 +17,7 @@
 + 对应账号抓包成功时的 x-rpc-device_fp
 ```
 
-这个插件做的事情很简单：
+这个插件做的事情：
 
 ```text
 1. 读取你自己从米游社 App 抓到的 HAR。
@@ -33,6 +35,16 @@
 4. zip / rar 压缩包内包含一个或多个 HAR。
 ```
 
+它还会做一个轻量的验证码提示：
+
+```text
+当用户发送 #米游社更新面板 这类命令后，插件不会拦截原命令。
+它只会延迟读取最近日志。
+如果发现验证码、1034、429 或 GT 验证相关失败，再补一条简短帮助。
+```
+
+这个提示不会替代 `GT-Manual-Plugin`，也不会干扰你手动完成验证。原来的面板查询、GT 验证和其他插件流程仍然照常运行。
+
 它内置了解压依赖：
 
 ```text
@@ -40,7 +52,7 @@ adm-zip        用于解压 zip
 node-unrar-js  用于解压 rar
 ```
 
-所以普通 `zip` / `rar` 不需要再在容器里额外安装 `unzip`、`7z`、`unar`。只有遇到特殊压缩包时，插件才会尝试调用系统解压工具作为兜底。
+普通 `zip` / `rar` 不需要再在容器里额外安装 `unzip`、`7z`、`unar`。只有遇到特殊压缩包时，插件才会尝试调用系统解压工具作为兜底。
 
 这个插件不会做这些事情：
 
@@ -57,13 +69,13 @@ node-unrar-js  用于解压 rar
 
 进入机器人根目录，再把插件克隆到 `./plugins/Miao_ID_plugin`。这和安装其他 Yunzai 插件时常用的 `git clone ... ./plugins/插件目录` 写法一致。
 
-TRSS-Yunzai 常见根目录是：
+TRSS-Yunzai 常见根目录：
 
 ```text
 /root/Yunzai
 ```
 
-Miao-Yunzai 常见根目录是：
+Miao-Yunzai 常见根目录：
 
 ```text
 /app/Miao-Yunzai
@@ -75,7 +87,7 @@ Miao-Yunzai 常见根目录是：
 
 ```bash
 cd /root/Yunzai
-git clone --depth=1 <你的仓库地址> ./plugins/Miao_ID_plugin
+git clone --depth=1 https://github.com/STC214/Miao_ID_Plugin.git ./plugins/Miao_ID_plugin
 cd ./plugins/Miao_ID_plugin
 pnpm install
 ```
@@ -125,7 +137,41 @@ docker restart trss-yunzai
 
 这是正常的。
 
-### 2.3 从 QQ 上传 HAR 导入
+### 2.3 验证码提示
+
+手动查看帮助：
+
+```text
+#米游社验证帮助
+```
+
+当你发送类似下面的命令时：
+
+```text
+#米游社更新面板
+#米游社刷新面板
+```
+
+插件会做旁路观察：
+
+```text
+1. 不拦截原命令。
+2. 不提前返回，不阻止 genshin 插件处理。
+3. 不替代 GT-Manual-Plugin。
+4. 延迟几秒读取最近日志。
+5. 如果日志里出现验证码失败、1034、429 或 GT 验证相关失败，再补一条简短帮助。
+```
+
+自动提示内容大致是：
+
+```text
+检测到米游社查询触发验证码。
+如果刚手动验证过仍失败，请导入一次你自己手机成功请求的 HAR：
+#米游社设备导入
+支持同消息/引用消息上传 har、zip、rar。导入后重启 trss-yunzai。
+```
+
+### 2.4 从 QQ 上传 HAR 导入
 
 最方便的方式是直接在 QQ 里上传抓包文件。
 
@@ -163,7 +209,7 @@ UID ********* <- xxx.har#12
 docker restart trss-yunzai
 ```
 
-### 2.4 从容器内文件路径导入
+### 2.5 从容器内文件路径导入
 
 如果 QQ 上传方式拿不到文件路径，可以先把 HAR 放进容器目录，例如：
 
@@ -184,7 +230,7 @@ docker restart trss-yunzai
 #米游社设备导入 /root/Yunzai/temp/xxx.rar
 ```
 
-### 2.5 从 URL 导入
+### 2.6 从 URL 导入
 
 如果你有一个临时下载链接，也可以直接导入：
 
@@ -194,7 +240,7 @@ docker restart trss-yunzai
 
 注意：不要把含 cookie、token、设备指纹的 HAR 上传到不可信网盘或公开链接。
 
-### 2.6 命令行手动提取
+### 2.7 命令行手动提取
 
 也可以不用 QQ 命令，直接在插件目录运行脚本：
 
@@ -227,9 +273,9 @@ chmod 600 /root/Yunzai/config/config/mys-device.local.json
 docker restart trss-yunzai
 ```
 
-### 2.7 插件实际写入的位置
+### 2.8 插件实际写入的位置
 
-最终配置文件路径是：
+最终配置文件路径：
 
 ```text
 /root/Yunzai/config/config/mys-device.local.json
@@ -237,7 +283,7 @@ docker restart trss-yunzai
 
 这个文件按 UID 存储不同设备模型。后续导入新的 HAR 时，会合并更新，不会故意删除已有 UID。
 
-### 2.8 推荐抓包内容
+### 2.9 推荐抓包内容
 
 HAR 里最好包含一次成功的角色详情请求，也就是请求成功、响应里有角色数据的 `character/detail`。
 
@@ -250,7 +296,7 @@ character/detail
 
 如果 HAR 里只有失败请求、验证码请求，或者没有角色详情接口，插件可能无法提取有效模型。
 
-### 2.9 常见问题
+### 2.10 常见问题
 
 如果发送 `#米游社设备帮助` 没反应：
 
@@ -336,11 +382,12 @@ rg -n "ltoken|stoken|cookie|Cookie|device_fp|device_id|account_id|token" .
 
 ```text
 index.js                                插件入口
-apps/mys-device.js                      QQ 命令处理
+apps/mys-device.js                      QQ 命令处理和验证码旁路提示
 lib/har-parser.js                       从 HAR 提取设备模型
 lib/device-store.js                     读写 mys-device.local.json
 lib/import-source.js                    处理路径、URL、QQ 文件、zip、rar
 lib/request-model.js                    请求头模型辅助函数
+lib/verification-watch.js               查询后延迟检查验证码日志
 scripts/extract-mys-device-from-har.mjs 命令行提取脚本
 templates/mys-device.local.example.json 脱敏配置模板
 ```
