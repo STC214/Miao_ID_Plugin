@@ -1,0 +1,8 @@
+node_modules/
+*.har
+*.zip
+*.rar
+*.reqable
+*.log
+mys-device*.json
+config/mys-device.local.json
