@@ -34,10 +34,11 @@ export class MysDeviceApp extends PluginBase {
       '#米游社设备列表',
       '#米游社设备导入 /root/Yunzai/temp/xxx.har',
       '#米游社设备导入 /root/Yunzai/temp/xxx.zip',
+      '#米游社设备导入 https://example.com/xxx.har',
       '#米游社设备导入 <同消息或引用消息中的 har/zip/rar 文件>',
       '#米游社验证帮助',
       '',
-      '说明：只在私聊或临时对话窗口导入你自己抓包得到的成功 character/detail 请求模型。zip/rar 内可以包含一个或多个 HAR。'
+      '说明：只在私聊或临时对话窗口导入你自己抓包得到的成功 character/detail 请求模型。支持本地路径、临时网盘直链、同消息/引用消息文件。'
     ].join('\n'))
   }
 
@@ -103,7 +104,8 @@ export class MysDeviceApp extends PluginBase {
           '可用方式：',
           '1. #米游社设备导入 /root/Yunzai/temp/xxx.har',
           '2. #米游社设备导入 /root/Yunzai/temp/xxx.zip',
-          '3. 在私聊或临时对话窗口发送 har/zip/rar 文件后，同消息或引用消息发送 #米游社设备导入'
+          '3. #米游社设备导入 https://tmpfiles.org/dl/xxxx/xxx.har',
+          '4. 在私聊或临时对话窗口发送 har/zip/rar 文件后，同消息或引用消息发送 #米游社设备导入'
         ].join('\n'))
         return
       }
