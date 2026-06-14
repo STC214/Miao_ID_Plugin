@@ -4,5 +4,6 @@ node_modules/
 *.rar
 *.reqable
 *.log
+TODO.md
 mys-device*.json
 config/mys-device.local.json
