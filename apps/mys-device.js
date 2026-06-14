@@ -1,7 +1,7 @@
 import path from 'path'
 import { extractProfilesFromHar, readHar } from '../lib/har-parser.js'
 import { listProfiles, mergeProfiles, DEFAULT_STORE } from '../lib/device-store.js'
-import { collectHarFiles } from '../lib/import-source.js'
+import { collectHarFiles, removeFiles } from '../lib/import-source.js'
 import { hasRecentVerificationLog, verificationHelpText } from '../lib/verification-watch.js'
 
 const PluginBase = globalThis.plugin || class {
@@ -37,7 +37,7 @@ export class MysDeviceApp extends PluginBase {
       '#米游社设备导入 <同消息或引用消息中的 har/zip/rar 文件>',
       '#米游社验证帮助',
       '',
-      '说明：只导入你自己抓包得到的成功 character/detail 请求模型。zip/rar 内可以包含一个或多个 HAR。'
+      '说明：只在私聊或临时对话窗口导入你自己抓包得到的成功 character/detail 请求模型。zip/rar 内可以包含一个或多个 HAR。'
     ].join('\n'))
   }
 
@@ -89,15 +89,21 @@ export class MysDeviceApp extends PluginBase {
 
   async importHar (e) {
     try {
+      if (!isPrivateLikeEvent(e)) {
+        await e.reply('为避免敏感信息泄露，仅限私聊或临时会话处理。')
+        return
+      }
+
       const arg = String(e.msg || '').replace(/^#?(米游社|mys)(设备|模型)导入\s*/, '').trim()
-      const files = await collectHarFiles({ event: e, arg })
+      const cleanupFiles = []
+      const files = await collectHarFiles({ event: e, arg, cleanupFiles })
       if (!files.length) {
         await e.reply([
           '没有找到可导入的 HAR。',
           '可用方式：',
           '1. #米游社设备导入 /root/Yunzai/temp/xxx.har',
           '2. #米游社设备导入 /root/Yunzai/temp/xxx.zip',
-          '3. 发送 har/zip/rar 文件后，同消息或引用消息发送 #米游社设备导入'
+          '3. 在私聊或临时对话窗口发送 har/zip/rar 文件后，同消息或引用消息发送 #米游社设备导入'
         ].join('\n'))
         return
       }
@@ -117,6 +123,7 @@ export class MysDeviceApp extends PluginBase {
       }
 
       mergeProfiles(allProfiles, DEFAULT_STORE)
+      removeFiles(cleanupFiles)
       await e.reply([
         `已导入 ${Object.keys(allProfiles).length} 个设备模型。`,
         ...allEvidence.map(item => `UID ${item.uid} <- ${path.basename(item.file)}#${item.index}`),
@@ -126,4 +133,15 @@ export class MysDeviceApp extends PluginBase {
       await e.reply(`导入失败：${err.message}`)
     }
   }
+}
+
+function isPrivateLikeEvent (e = {}) {
+  const messageType = String(e.message_type || e.messageType || e.chat_type || e.chatType || '').toLowerCase()
+  const detailType = String(e.detail_type || e.detailType || e.sub_type || e.subType || '').toLowerCase()
+
+  if (messageType.includes('private') || messageType.includes('friend')) return true
+  if (messageType.includes('temp') || detailType.includes('temp')) return true
+  if (e.isPrivate || e.is_private || e.private) return true
+
+  return false
 }

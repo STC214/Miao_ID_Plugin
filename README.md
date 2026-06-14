@@ -31,8 +31,9 @@ Repository: <https://github.com/STC214/Miao_ID_Plugin.git>
 ```text
 1. 容器内 HAR 文件路径。
 2. http/https 下载链接。
-3. QQ 聊天中上传的 har / zip / rar 文件。
+3. QQ 私聊或临时对话窗口中上传的 har / zip / rar 文件。
 4. zip / rar 压缩包内包含一个或多个 HAR。
+5. 群聊中不接收、不处理 har / zip / rar，避免敏感 HAR 泄露。
 ```
 
 它还会做一个轻量的验证码提示：
@@ -53,6 +54,9 @@ node-unrar-js  用于解压 rar
 ```
 
 普通 `zip` / `rar` 不需要再在容器里额外安装 `unzip`、`7z`、`unar`。只有遇到特殊压缩包时，插件才会尝试调用系统解压工具作为兜底。
+
+压缩包只有在成功提取出有效设备模型并写入配置后，才会自动删除原始压缩包。解压出来的 HAR 文件会保留；原本未压缩的裸 HAR 文件也会保留。
+URL 导入带有 30 秒下载超时和 10MB 大小上限，避免异常链接拖慢机器人进程。
 
 这个插件不会做这些事情：
 
@@ -173,7 +177,7 @@ docker restart trss-yunzai
 
 ### 2.4 从 QQ 上传 HAR 导入
 
-最方便的方式是直接在 QQ 里上传抓包文件。
+最方便的方式是直接在 QQ 私聊或临时对话窗口里上传抓包文件。群聊里不会接收或处理 HAR、ZIP、RAR。
 
 支持这些文件：
 
@@ -186,12 +190,12 @@ xxx.rar
 推荐操作：
 
 ```text
-1. 在 QQ 里把 har / zip / rar 文件发给机器人。
+1. 在 QQ 私聊或临时对话窗口里把 har / zip / rar 文件发给机器人。
 2. 引用这条文件消息。
 3. 发送：#米游社设备导入
 ```
 
-如果当前适配器能在消息事件里提供文件路径或下载链接，插件会自动读取这个文件，解压压缩包，并扫描里面的 HAR。
+如果当前适配器能在消息事件里提供文件路径或下载链接，插件会自动读取这个文件，解压压缩包，并扫描里面的 HAR。只有成功导入有效设备模型后，原始压缩包才会自动删除；解压出来的 HAR 会长期保留。
 
 如果导入成功，会返回类似：
 
@@ -223,7 +227,7 @@ docker restart trss-yunzai
 #米游社设备导入 /root/Yunzai/temp/xxx.har
 ```
 
-压缩包也可以：
+压缩包也可以。导入成功后，原始压缩包会自动删除，解压出来的 HAR 会保留：
 
 ```text
 #米游社设备导入 /root/Yunzai/temp/xxx.zip
@@ -238,7 +242,21 @@ docker restart trss-yunzai
 #米游社设备导入 https://example.com/xxx.har
 ```
 
-注意：不要把含 cookie、token、设备指纹的 HAR 上传到不可信网盘或公开链接。
+URL 导入只适合小文件，插件最多下载 10MB。HAR 里通常含 cookie、token、设备指纹，不要上传到不可信网盘或长期公开链接。导入完成后，尽快删除临时文件或让链接过期。
+
+下面这些服务都能临时存放文件并返回可复制的 URL。实际可用性、速度和规则可能变化，使用前以官网说明为准。
+
+| 服务 | 适合用法 | 示例 |
+| --- | --- | --- |
+| tmpfiles.org | 可设置 60 秒到 48 小时过期，API 返回文件 URL。 | `curl -F "file=@xxx.har" -F "expire=3600" https://tmpfiles.org/api/v1/upload` |
+| temp.sh | 简单临时上传，页面说明文件 3 天后过期。 | `curl -F "file=@xxx.har" https://temp.sh/upload` |
+| file.io | 可设置过期和下载次数，返回结果里有 `link` 字段；适合一次性下载。 | `curl -F "file=@xxx.har" -F "maxDownloads=1" https://file.io` |
+
+拿到返回 URL 后，再发送：
+
+```text
+#米游社设备导入 <返回的 URL>
+```
 
 ### 2.7 命令行手动提取
 
@@ -310,9 +328,10 @@ character/detail
 如果 QQ 上传文件后导入失败：
 
 ```text
-1. 当前适配器可能没有把文件路径或下载链接传给插件。
-2. 换用容器内路径导入。
-3. 或者把文件放到 /root/Yunzai/temp/ 后再导入。
+1. 确认是在私聊或临时对话窗口操作，群聊或无法识别会话类型的事件都不会接收 har/zip/rar。
+2. 当前适配器可能没有把文件路径或下载链接传给插件。
+3. 换用容器内路径导入。
+4. 或者把文件放到 /root/Yunzai/temp/ 后再导入。
 ```
 
 如果导入成功但查询仍然弹验证码：
